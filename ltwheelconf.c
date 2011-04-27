@@ -28,6 +28,8 @@
 #include <fcntl.h>
 #include <string.h>
 
+#define VERSION "0.2"
+
 #define VENDOR 0x046d
 #define DFPNORMAL 0xc294
 #define DFPEXTENDED 0xc298
@@ -239,7 +241,7 @@ int set_gain(int gain, char *device_file_name, int wait_for_udev)
 
 
 void help() {
-    printf ( "%s","\nltwheelconf - Configure Logitech Driving Force Pro, G25, G27 wheels\n\
+    printf ( "%s","\nltwheelconf " VERSION " - Configure Logitech Driving Force Pro, G25, G27 wheels\n\
 \n\
 ltwheelconf Copyright (C) 2011 Michael Bauer\n\
 This program comes with ABSOLUTELY NO WARRANTY.\n\
