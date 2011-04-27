@@ -85,9 +85,10 @@ int send_command(libusb_device_handle *handle, unsigned char command[7] ) {
 /*
  * Logitech wheels are in a kind of restricted mode when initially connected via usb.
  * In this restricted mode 
- *  - the axes for throttle and brake are always combined
- *  - the rotation range is limited to 540 degrees
- *  - the clutch pedal of G25/G27 does not work
+ *  - axes for throttle and brake are always combined
+ *  - rotation range is limited to 300 degrees
+ *  - clutch pedal of G25/G27 does not work
+ *  - H-gate shifter of G25/G27 does not work
  * 
  * In restricted mode the wheels register on USB with pid 0xc294.
  * In native mode they register on USB with pid 0xc298 (DFP) or 0xc299 (G25/G27)
@@ -114,7 +115,7 @@ int set_native_mode() {
 
         /* Assume the device is a G25/G27 in restricted mode and send command to switch to 
          * extended mode.
-         * G25/G27 will change it's ID, DFP will ignore the command
+         * G25/G27 will change it's PID, DFP will ignore the command
          */
         send_command(handle, native_mode_g25);
         
@@ -263,7 +264,6 @@ Wheel configuration: \n\
                                 -> Only works with kernel >= 2.6.39\n\
 -g, --gain=value            Set forcefeedback gain. Value should be between 0 and 100 (0 -> no gain, 100 -> max gain). \n\
                             Note: \n\
-                                -> Requires wheel to be in native (-n) mode!\n\
                                 -> Requires parameter '--device' to specify the input device\n\
 -d, --device=inputdevice    Specify inputdevice for force-feedback related configuration (e.g. autocenter)\n\
 \n\
