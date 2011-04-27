@@ -1,0 +1,13 @@
+This tool allows you to change various settings of the Logitech racing wheels
+-> Driving Force Pro (DFP)
+-> G25
+-> G27
+
+Available options:
+-> set wheel to "native" mode (support separate axes and clutch pedal, full 900 degree rotation)
+-> Set wheel rotation range
+-> Set autocenter force 
+-> Set ForceFeedback gain
+
+Note:
+In order to set/disable autocenter you need to run at least the (upcoming) kernel 2.6.39. 
