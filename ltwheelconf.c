@@ -35,7 +35,9 @@
 #define DFPEXTENDED 0xc298
 #define G25EXTENDED 0xc299
 
-#define WAIT_TIMEOUT 5000
+#define TRANSFER_WAIT_TIMEOUT_MS 5000
+#define CONFIGURE_WAIT_SEC 3
+#define UDEV_WAIT_SEC 2
 
 static unsigned char native_mode_dfp[] = { 0xf8, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00 };
 static unsigned char native_mode_g25[] = { 0xf8, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00 };
@@ -54,7 +56,7 @@ int send_command(libusb_device_handle *handle, unsigned char command[7] ) {
     if ( (stat < 0) || verbose_flag) perror("Claiming USB interface");
 
     int transferred = 0;
-    stat = libusb_interrupt_transfer( handle, 1, command, sizeof( command ), &transferred, WAIT_TIMEOUT );
+    stat = libusb_interrupt_transfer( handle, 1, command, sizeof( command ), &transferred, TRANSFER_WAIT_TIMEOUT_MS );
     if ( (stat < 0) || verbose_flag) perror("Sending USB command");
 
     /* In case the command just sent caused the device to switch from restricted mode to native mode
@@ -116,8 +118,8 @@ int set_native_mode() {
          */
         send_command(handle, native_mode_g25);
         
-        // wait a second until wheel is reconfigured...
-        sleep(1);
+        // wait until wheel reconfigures to new PID...
+        sleep(CONFIGURE_WAIT_SEC);
 
         // If above command was successfully we should now find a G25/G27 in extended mode
         handle = libusb_open_device_with_vid_pid(NULL, VENDOR, G25EXTENDED );
@@ -130,8 +132,8 @@ int set_native_mode() {
             handle = libusb_open_device_with_vid_pid(NULL, VENDOR, DFPNORMAL );
             send_command(handle, native_mode_dfp);
 
-            // wait a second until wheel is reconfigured...
-            sleep(1);
+            // wait until wheel reconfigures to new PID...
+            sleep(CONFIGURE_WAIT_SEC);
             
             // If above command was successfully we should now find a DFP in extended mode
             handle = libusb_open_device_with_vid_pid(NULL, VENDOR, DFPEXTENDED );
@@ -186,7 +188,7 @@ int set_autocenter(int centerforce, char *device_file_name, int wait_for_udev)
     /* sleep 2 seconds to allow udev to set up device nodes due to kernel 
      * driver re-attaching while setting native mode or wheel range before
      */
-    if (wait_for_udev) sleep(2);
+    if (wait_for_udev) sleep(UDEV_WAIT_SEC);
 
     /* Open device */
     int fd = open(device_file_name, O_RDWR);
@@ -216,7 +218,7 @@ int set_gain(int gain, char *device_file_name, int wait_for_udev)
     /* sleep 2 seconds to allow udev to set up device nodes due to kernel 
      * driver re-attaching while setting native mode or wheel range before
      */
-    if (wait_for_udev) sleep(2);
+    if (wait_for_udev) sleep(UDEV_WAIT_SEC);
     
     /* Open device */
     int fd = open(device_file_name, O_RDWR);
