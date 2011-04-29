@@ -182,11 +182,57 @@ int set_range(unsigned short int range) {
     return 0;
 }
 
-int set_autocenter(int centerforce, char *device_file_name, int wait_for_udev)
+
+/*
+ * Native method to set autcenter behaviour of LT wheels.
+ * 
+ * Based on a post by "anrp" on the vdrift forum:
+ * http://vdrift.net/Forum/viewtopic.php?t=412&postdays=0&postorder=asc&start=60
+ * 
+ * fe0b0101ff - centering spring, slow spring ramp 
+ * ____^^____ - left ramp speed 
+ * ______^^__ - right ramp speed 
+ * ________^^ - overall strength 
+ * 
+ * Rampspeed seems to be limited to 0-7 only.
+ */
+int set_autocenter(int centerforce, int rampspeed)
+{
+    if (verbose_flag) printf ( "Setting autocenter...");
+    
+    // probe for a G25 (already set to nativemode)
+    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VENDOR, G25EXTENDED );
+    if ( handle != NULL ) {
+        unsigned char cmd[] = { 0xfe, 0x0b, rampspeed & 0x0f , rampspeed & 0x0f, centerforce & 0xff, 0x00, 0x00 };
+        send_command(handle, cmd);
+    } else {
+        // probe for a DFP (already set to nativemode)
+        handle = libusb_open_device_with_vid_pid(NULL, VENDOR, DFPEXTENDED );
+        if ( handle != NULL ) {
+            unsigned char cmd[] = { 0xfe, 0x0b, rampspeed & 0x0f , rampspeed & 0x0f, centerforce & 0xff, 0x00, 0x00 };
+            send_command(handle, cmd);
+        } else {
+            printf ( "No suitable wheel (DFP/G25/G27) found. Make sure your wheel is set to native mode.\n" );
+            return -1;
+        }
+    }
+    
+    printf ("Wheel autocenter is now set to %d with rampspeed %d.\n", centerforce, rampspeed);
+    return 0;
+}
+
+/*
+ * Generic method to set autocenter force of any wheel device recognized by kernel
+ * This method does not allow to set the rampspeed and force individually.
+ * 
+ * Looking at hid-lgff.c i think the kernel driver actually might do the wrong thing by modifying 
+ * the rampspeed instead of the general force...?
+ */
+int alt_set_autocenter(int centerforce, char *device_file_name, int wait_for_udev)
 {
     if (verbose_flag) printf ( "Device %s: Setting autocenter force to %d.\n", device_file_name, centerforce );
     
-    /* sleep 2 seconds to allow udev to set up device nodes due to kernel 
+    /* sleep UDEV_WAIT_SEC seconds to allow udev to set up device nodes due to kernel 
      * driver re-attaching while setting native mode or wheel range before
      */
     if (wait_for_udev) sleep(UDEV_WAIT_SEC);
@@ -202,7 +248,7 @@ int set_autocenter(int centerforce, char *device_file_name, int wait_for_udev)
         struct input_event ie;
         ie.type = EV_FF;
         ie.code = FF_AUTOCENTER;
-        ie.value = 0xFFFFUL * centerforce/ 100;
+        ie.value = 0xFFFFUL * centerforce/100;
         if (write(fd, &ie, sizeof(ie)) == -1) {
             perror("set auto-center");
             return -1;
@@ -216,7 +262,7 @@ int set_gain(int gain, char *device_file_name, int wait_for_udev)
 {
     if (verbose_flag) printf ( "Device %s: Setting FF gain to %d.\n", device_file_name, gain);
     
-    /* sleep 2 seconds to allow udev to set up device nodes due to kernel 
+    /* sleep UDEV_WAIT_SEC seconds to allow udev to set up device nodes due to kernel 
      * driver re-attaching while setting native mode or wheel range before
      */
     if (wait_for_udev) sleep(UDEV_WAIT_SEC);
@@ -254,24 +300,42 @@ General Options: \n\
 -h, --help                  This help text\n\
 \n\
 Wheel configuration: \n\
--n, --nativemode            Set wheel to native mode (separate axes, full wheel range)\n\
+-n, --nativemode            Set wheel to native mode (separate axes, full wheel range, clutch pedal, H-shifter)\n\
 -r, --range=degrees         Set wheel rotation range (up to 900 degrees).\n\
                             Note:\n\
                                 -> Requires wheel to be in native (-n) mode!\n\
--a, --autocenter=value      Set autocenter force. Value should be between 0 and 100 (0 -> no autocenter, 100 -> max autocenter force). \n\
+-a, --autocenter=value      Set autocenter bypassing hid driver. Value should be between 0 and 255 (0 -> no autocenter, 255 -> max autocenter force). \n\
+                            Together with the rampspeed setting this allows much finer control of the autocenter behaviour as using the generic input interface.\n\
+                            Note: \n\
+                                -> Requires parameter '--rampspeed'\n\
+-s, --rampspeed             Use in conjuntion with the --autocenter parameter. Specify how fast the autocenter force should increase when rotating wheel.\n\
+                            Value should be between 0 and 7\n\
+                            Low value means the centering force is increasing only slightly when turning the wheel.\n\
+                            High value means the centering force is increasing very fast when turning the wheel.\n\
+-b, --altautocenter=value   Set autocenter force using generic input interface. Value should be between 0 and 100 (0 -> no autocenter, 100 -> max autocenter force). \n\
+                            Use this if --autocenter does not work for your device.\n\
                             Note: \n\
                                 -> Requires parameter '--device' to specify the input device\n\
                                 -> Only works with kernel >= 2.6.39\n\
+                                -> The rampspeed can not be influenced using this method\n\
 -g, --gain=value            Set forcefeedback gain. Value should be between 0 and 100 (0 -> no gain, 100 -> max gain). \n\
                             Note: \n\
                                 -> Requires parameter '--device' to specify the input device\n\
--d, --device=inputdevice    Specify inputdevice for force-feedback related configuration (e.g. autocenter)\n\
+-d, --device=inputdevice    Specify inputdevice for force-feedback related configuration (--gain and --altautocenter)\n\
 \n\
 Note: You can freely combine all configuration options.\n\
 \n\
-Example:\n\
-Enable separate axes, disable autocenter and set wheel rotation range of 540 degrees:\n\
-$ ltwheelconf --nativemode --range 540 --autocenter 0 --device /dev/input/G25\n\
+Examples:\n\
+Put wheel into native mode:\n\
+$ sudo ltwheelconf --nativemode\n\
+Set wheel rotation range to 900 degree:\n\
+$ sudo ltwheelconf --range 900 \n\
+Set moderate autocenter:\n\
+$ sudo ltwheelconf --autocenter 100 --rampspeed 1\n\
+Disable autocenter completely:\n\
+$ sudo ltwheelconf --autocenter 0 --rampspeed 0\n\
+Set native mode, disable autocenter and set wheel rotation range of 540 degrees in one call:\n\
+$ sudo ltwheelconf --nativemode --range 540 --autocenter 0 --rampspeed 0\n\
 \n\
 Contact: michael@m-bauer.org\n\
 \n");
@@ -285,7 +349,9 @@ int main (int argc, char **argv)
     int do_native = 0;
     int do_range = 0;
     int do_autocenter = 0;
+    int do_alt_autocenter = 0;
     int do_gain = 0;
+    int rampspeed = -1;
     char device_file_name[128];
     memset(device_file_name, 0, sizeof(device_file_name));
     verbose_flag = 0;
@@ -296,7 +362,9 @@ int main (int argc, char **argv)
         {"help",       no_argument,       0,             'h'},
         {"nativemode", no_argument,       0,             'n'},
         {"range",      required_argument, 0,             'r'},
+        {"altautocenter", required_argument, 0,             'b'},
         {"autocenter", required_argument, 0,             'a'},
+        {"rampspeed",  required_argument, 0,             's'},
         {"gain",       required_argument, 0,             'g'},
         {"device",     required_argument, 0,             'd'},
         {0,            0,                 0,              0 }
@@ -304,7 +372,7 @@ int main (int argc, char **argv)
 
     while (optind < argc) {
         int index = -1;
-        int result = getopt_long (argc, argv, "vhnr:a:g:d:",
+        int result = getopt_long (argc, argv, "vhnr:a:g:d:s:b:",
                                   long_options, &index);
         
         if (result == -1)
@@ -312,30 +380,39 @@ int main (int argc, char **argv)
 
         switch (result) {
                 case 'v':
-                        verbose_flag = 1;
-                        break;
+                    verbose_flag = 1;
+                    break;
                 case 'n':
-                        do_native = 1;
-                        break;
+                    do_native = 1;
+                    break;
                 case 'r':
-                        range = atoi(optarg);
-                        do_range = 1;
-                        break;
+                    range = atoi(optarg);
+                    do_range = 1;
+                    break;
                 case 'a':
-                        centerforce = atoi(optarg);
-                        do_autocenter = 1;
-                        break;
+                    centerforce = atoi(optarg);
+                    do_autocenter = 1;
+                    do_alt_autocenter = 0;
+                    break;
+                case 'b':
+                    centerforce = atoi(optarg);
+                    do_autocenter = 0;
+                    do_alt_autocenter = 1;
+                    break;
+                case 's':
+                    rampspeed = atoi(optarg);
+                    break;
                 case 'g':
-                        gain = atoi(optarg);
-                        do_gain = 1;
-                        break;
+                    gain = atoi(optarg);
+                    do_gain = 1;
+                    break;
                 case 'd':
-                        strncpy(device_file_name, optarg, 128);
-                        break;
+                    strncpy(device_file_name, optarg, 128);
+                    break;
                 case '?':
                 default:
-                        help();
-                        break;
+                    help();
+                    break;
         }
 
     }
@@ -355,12 +432,21 @@ int main (int argc, char **argv)
         }
         
         if (do_autocenter) {
+            if (rampspeed != -1) {
+                set_autocenter(centerforce, rampspeed);
+                wait_for_udev = 1;
+            } else {
+                printf("Please provide '--rampspeed' parameter\n");
+            } 
+        }
+        
+        if (do_alt_autocenter) {
             if (strlen(device_file_name)) {
-                set_autocenter(centerforce, device_file_name, wait_for_udev);
+                alt_set_autocenter(centerforce, device_file_name, wait_for_udev);
                 wait_for_udev = 0;
             } else {
                 printf("Please provide the according event interface for your wheel using '--device' parameter (E.g. '--device /dev/input/event0')\n");
-            }    
+            } 
         }
         
         if (do_gain) {
