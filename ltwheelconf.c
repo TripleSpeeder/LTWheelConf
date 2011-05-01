@@ -28,25 +28,167 @@
 #include <fcntl.h>
 #include <string.h>
 
-#define VERSION "0.2"
+#define VERSION "0.2.1"
 
-#define VENDOR 0x046d
-#define DFPNORMAL 0xc294
-#define DFPEXTENDED 0xc298
-#define G25EXTENDED 0xc299
+#define VID_LOGITECH 0x046d
+#define PID_DRIVINGFORCE 0xc294
+#define PID_MOMOFORCE 0xc295
+#define PID_DRIVINGFORCEPRO 0xc298
+#define PID_G25 0xc299
+#define PID_DRIVINGFORCEGT 0xc29A
+#define PID_G27 0xc29B
+
+
+enum PIDIndex {
+    DRIVINGFORCE = 0,
+    MOMOFORCE,
+    DRIVINGFORCEPRO,
+    G25,
+    DRIVINGFORCEGT,
+    G27,
+    
+    PIDs_END
+};
+
+typedef struct {
+    unsigned int idx;
+    char shortname[255];
+    char name[255];
+    unsigned int restricted_pid;
+    unsigned int native_pid;
+    unsigned char cmd_native[8];
+    unsigned char cmd_range_prefix[2]; // FIXME - This is just a hack...
+    unsigned char cmd_autocenter_prefix[2]; // FIXME - This is just a hack...
+}wheelstruct;
+
+static const wheelstruct wheels[] = {
+    { 
+        DRIVINGFORCE,
+        "DF",
+        "Driving Force", 
+        0xc294,
+        0xc294,
+        {0},
+        {0},
+        {0}
+    },
+    { 
+        MOMOFORCE,
+        "MF",
+        "Momo Force", 
+        0xc294,
+        0xc295,
+        {0},
+        {0},
+        {0}
+    }, 
+    { 
+        DRIVINGFORCEPRO,
+        "DFP",
+        "Driving Force Pro",
+        0xc294,
+        0xc298,
+        { 0xf8, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00 },
+        { 0xf8, 0x03 },
+        { 0xfe, 0x0b }
+    },
+    { 
+        G25,
+        "G25",
+        "G25", 
+        0xc294,
+        0xc299,
+        { 0xf8, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00 },
+        { 0xf8, 0x81 },
+        { 0xfe, 0x0b }
+    }, 
+    { 
+        DRIVINGFORCEGT,
+        "DFGT",
+        "Driving Force GT", 
+        0xc294,
+        0xc29A,
+        {0},
+        {0},
+        {0}
+    },
+    { 
+        G27, 
+        "G27", 
+        "G27", 
+        0xc294,
+        0xc29B,
+        // FIXME: It seems this is putting the G27 into kind of G25 mode instead of real native mode, meaning the additional 
+        // buttons on the wheel do not work. Need to get hands on a real device...
+        { 0xf8, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00 },
+        { 0xf8, 0x81 },
+        { 0xfe, 0x0b }
+    },
+    
+
+    { 
+        PIDs_END,
+        "",
+        "",
+        0,
+        0,
+        {0},
+        {0},
+        {0}
+    }
+};
+
 
 #define TRANSFER_WAIT_TIMEOUT_MS 5000
 #define CONFIGURE_WAIT_SEC 3
 #define UDEV_WAIT_SEC 2
 
-static unsigned char native_mode_dfp[] = { 0xf8, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00 };
-static unsigned char native_mode_g25[] = { 0xf8, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00 };
 int verbose_flag = 0;
 
 /*
- * Send custom command to USB device using interrup transfer
+ * Search and list all known/supported wheels
  */
-int send_command(libusb_device_handle *handle, unsigned char command[7] ) {
+void list_devices() {
+    
+    libusb_device_handle *handle = 0;
+    libusb_device *dev = 0;
+    struct libusb_device_descriptor desc;
+    unsigned char descString[255];
+    memset(&descString, 0, sizeof(descString));
+
+    int numFound = 0;
+    int PIDIndex = 0;
+    wheelstruct w = wheels[PIDIndex];
+    for (PIDIndex = 0; PIDIndex < PIDs_END; PIDIndex++) {
+        w = wheels[PIDIndex];
+        printf("Scanning for \"%s\": ", w.name);
+        handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.native_pid);
+        if (handle != 0) {
+            dev = libusb_get_device(handle);
+            if (dev != 0) {
+                int ret = libusb_get_device_descriptor(dev, &desc);
+                if (ret == 0) {
+                    numFound++;
+                    libusb_get_string_descriptor_ascii(handle, desc.iProduct, descString, 255);
+                    printf("\t\tFound \"%s\", %04x:%04x (bus %d, device %d)", descString, desc.idVendor, desc.idProduct,
+                           libusb_get_bus_number(dev), libusb_get_device_address(dev));
+                    
+                } else {
+                    perror("Get device descriptor");
+                }
+            } else {
+                perror ("Get device");
+            }
+        }
+        printf("\n");
+    }
+    printf("Found %d devices.\n", numFound);
+}
+
+/*
+ * Send custom command to USB device using interrupt transfer
+ */
+int send_command(libusb_device_handle *handle, unsigned char command[8] ) {
 
     int stat;
     stat = libusb_detach_kernel_driver(handle, 0);
@@ -62,7 +204,7 @@ int send_command(libusb_device_handle *handle, unsigned char command[7] ) {
     /* In case the command just sent caused the device to switch from restricted mode to native mode
      * the following two commands will fail due to invalid device handle (because the device changed
      * its pid on the USB bus). 
-     * So it is not possible anymore to release the interface or re-attach kernel driver.
+     * So it is not possible anymore to release the interface and re-attach kernel driver.
      * I am not sure if this produces a memory leak within libusb, but i do not think there is another 
      * solution possible...
      */
@@ -96,90 +238,86 @@ int send_command(libusb_device_handle *handle, unsigned char command[7] ) {
  * This function takes care to switch the wheel to "native" mode with no restrictions.
  * 
  */
-int set_native_mode() {
-    // First check if there already is G25/G27 or DFP in native mode
-    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VENDOR, G25EXTENDED);
-    if ( handle != NULL ) {
-        printf( "Found a Logitech G25/G27 already set to native mode.\n" );
+int set_native_mode(int wheelIndex) {
+    
+    wheelstruct w = wheels[wheelIndex];
+
+    // first check if wheel has native mode at all
+    if (w.native_pid == w.restricted_pid) {
+        printf( "%s is always in native mode.\n", w.name);
         return 0;
     }
-    handle = libusb_open_device_with_vid_pid(NULL, VENDOR, DFPEXTENDED);
+    
+    // check if wheel is already in native mode
+    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.native_pid);
     if ( handle != NULL ) {
-        printf ( "Found a Logitech Driving Force Pro already set to native mode.\n" );
+        printf( "Found a %s already in native mode.\n", w.name);
         return 0;
     }
+    
+    // check if we know how to set native mode
+    if (!w.cmd_native) {
+        printf( "Sorry, do not know how to set %s into native mode.\n", w.name);
+        return -1;
+    }
+    
+    // try to get handle to device in restricted mode
+    handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.restricted_pid );
+    if ( handle == NULL ) {
+        printf( "Can not find %s in restricted mode (PID %x). This should not happen :-(\n", w.name, w.restricted_pid);
+        return -1;
+    }
 
-    // Now search for a wheel in restricted "DFP" mode
-    handle = libusb_open_device_with_vid_pid(NULL, VENDOR, DFPNORMAL );
+    // finally send command to switch wheel to native mode
+    send_command(handle, w.cmd_native);
+
+    // wait until wheel reconfigures to new PID...
+    sleep(CONFIGURE_WAIT_SEC);
+    
+    // If above command was successfully we should now find the wheel in extended mode
+    handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.native_pid);
     if ( handle != NULL ) {
-
-        /* Assume the device is a G25/G27 in restricted mode and send command to switch to 
-         * extended mode.
-         * G25/G27 will change it's PID, DFP will ignore the command
-         */
-        send_command(handle, native_mode_g25);
-        
-        // wait until wheel reconfigures to new PID...
-        sleep(CONFIGURE_WAIT_SEC);
-
-        // If above command was successfully we should now find a G25/G27 in extended mode
-        handle = libusb_open_device_with_vid_pid(NULL, VENDOR, G25EXTENDED );
-        if ( handle != NULL ) {
-            printf ( "Logitech G25/G27 wheel is now set to native mode.\n" );
-        } else { 
-            /* Assume the device is a DFP in restricted mode and send command to switch to 
-             * extended mode. 
-             */
-            handle = libusb_open_device_with_vid_pid(NULL, VENDOR, DFPNORMAL );
-            send_command(handle, native_mode_dfp);
-
-            // wait until wheel reconfigures to new PID...
-            sleep(CONFIGURE_WAIT_SEC);
-            
-            // If above command was successfully we should now find a DFP in extended mode
-            handle = libusb_open_device_with_vid_pid(NULL, VENDOR, DFPEXTENDED );
-            if ( handle != NULL ) {
-                printf ( "Logitech Driving Force Pro wheel is now set to native mode.\n" );
-            } else {
-                // this should not happen, just in case
-                printf ( "Unable to set the wheel to native mode.\n" );
-                return -1;
-            }
-        }
+        printf ( "%s is now set to native mode.\n", w.name);
     } else {
-        printf ( "Unable to find an uninitialised Logitech G25/G27/Driving Force Pro wheel.\n" );
+        // this should not happen, just in case
+        printf ( "Unable to set %s to native mode.\n", w.name );
         return -1;
     }
 
     return 0;
 }
+    
 
 /*
  * Set maximum rotation range of wheel in degrees
  * G25/G27/DFP support up to 900 degrees.
  */
-int set_range(unsigned short int range) {
-
-    // probe for a G25 (already set to nativemode)
-    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VENDOR, G25EXTENDED );
-    if ( handle != NULL ) {
-        if (verbose_flag) printf ( "Setting range to %d.\n", range );
-        unsigned char setrange[] = { 0xf8, 0x81, range & 0x00ff , (range & 0xff00) >> 8, 0x00, 0x00, 0x00 };
-        send_command(handle, setrange );
-    } else {
-        // probe for a DFP (already set to nativemode)
-        handle = libusb_open_device_with_vid_pid(NULL, VENDOR, DFPEXTENDED );
-        if ( handle != NULL ) {
-            printf ( "Setting range to %d.\n", range );
-            unsigned char setrange[] = { 0xf8, 0x03, range & 0x00ff , (range & 0xff00)>>8, 0x00, 0x00, 0x00 };
-            send_command(handle, setrange );
-        } else {
-            printf ( "No suitable wheel (DFP/G25/G27) found. Make sure your wheel is set to native mode.\n" );
-            return -1;
-        }
+int set_range(int wheelIndex, unsigned short int range) {
+    
+    wheelstruct w = wheels[wheelIndex];
+    
+    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.native_pid );
+    if ( handle == NULL ) {
+        printf ( "%s not found. Make sure it is set to native mode (use --native).\n", w.name);
+        return -1;
     }
-    printf ("Wheel rotation range is now set to %d degrees.\n", range);
+    
+    // Build up command to set range.
+    
+    // check if we know how to set native range
+    if (!w.cmd_range_prefix) {
+        printf( "Sorry, do not know how to set rotation range for %s.\n", w.name);
+        return -1;
+    }
+    
+    // FIXME - This cmd_range_prefix stuff is really ugly for now...
+    unsigned char setrange[] = { w.cmd_range_prefix[0], w.cmd_range_prefix[1], range & 0x00ff , (range & 0xff00)>>8, 0x00, 0x00, 0x00 };
+    
+    // send command to switch wheel to native mode
+    send_command(handle, setrange);
+    printf ("Wheel rotation range of %s is now set to %d degrees.\n", w.name, range);
     return 0;
+    
 }
 
 
@@ -196,20 +334,45 @@ int set_range(unsigned short int range) {
  * 
  * Rampspeed seems to be limited to 0-7 only.
  */
-int set_autocenter(int centerforce, int rampspeed)
+int set_autocenter(int wheelIndex, int centerforce, int rampspeed)
 {
     if (verbose_flag) printf ( "Setting autocenter...");
     
+    wheelstruct w = wheels[wheelIndex];
+    
+    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.native_pid );
+    if ( handle == NULL ) {
+        printf ( "%s not found. Make sure it is set to native mode (use --native).\n", w.name);
+        return -1;
+    }
+    
+    // Build up command to set range.
+    
+    // check if we know how to set native range
+    if (!w.cmd_autocenter_prefix) {
+        printf( "Sorry, do not know how to set autocenter range for %s. Please try generic implementation using --alt_autocenter.\n", w.name);
+        return -1;
+    }
+    
+    // FIXME - This cmd_autocenter_prefix stuff is really ugly for now...
+    unsigned char cmd[] = { w.cmd_autocenter_prefix[0], w.cmd_autocenter_prefix[1], rampspeed & 0x0f , rampspeed & 0x0f, centerforce & 0xff, 0x00, 0x00, 0x00 };
+    
+    send_command(handle, cmd);
+    
+    printf ("Autocenter for %s is now set to %d with rampspeed %d.\n", w.name, centerforce, rampspeed);
+    return 0;
+    
+/*    
     // probe for a G25 (already set to nativemode)
-    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VENDOR, G25EXTENDED );
+    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, PID_G25 );
     if ( handle != NULL ) {
-        unsigned char cmd[] = { 0xfe, 0x0b, rampspeed & 0x0f , rampspeed & 0x0f, centerforce & 0xff, 0x00, 0x00 };
+        unsigned char cmd[] = { 0xfe, 0x0b, rampspeed & 0x0f , rampspeed & 0x0f, centerforce & 0xff, 0x00, 0x00, 0x00 };
         send_command(handle, cmd);
     } else {
         // probe for a DFP (already set to nativemode)
-        handle = libusb_open_device_with_vid_pid(NULL, VENDOR, DFPEXTENDED );
+        handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, PID_DRIVINGFORCEPRO );
         if ( handle != NULL ) {
-            unsigned char cmd[] = { 0xfe, 0x0b, rampspeed & 0x0f , rampspeed & 0x0f, centerforce & 0xff, 0x00, 0x00 };
+            unsigned char cmd[] = { 0xfe, 0x0b, rampspeed & 0x0f , rampspeed & 0x0f, centerforce & 0xff, 0x00, 0x00, 0x00 };
             send_command(handle, cmd);
         } else {
             printf ( "No suitable wheel (DFP/G25/G27) found. Make sure your wheel is set to native mode.\n" );
@@ -219,6 +382,7 @@ int set_autocenter(int centerforce, int rampspeed)
     
     printf ("Wheel autocenter is now set to %d with rampspeed %d.\n", centerforce, rampspeed);
     return 0;
+*/
 }
 
 /*
@@ -296,10 +460,15 @@ ltwheelconf Copyright (C) 2011 Michael Bauer\n\
 This program comes with ABSOLUTELY NO WARRANTY.\n\
 \n\
 General Options: \n\
--v, --verbose               Verbose output\n\
 -h, --help                  This help text\n\
+-v, --verbose               Verbose output\n\
+-l, --list                  List all found/supported devices\n\
 \n\
 Wheel configuration: \n\
+-w, --wheel=shortname       Which wheel is connected. Possible values:\n\
+                                -> DFP\n\
+                                -> G25\n\
+                                -> G27\n\
 -n, --nativemode            Set wheel to native mode (separate axes, full wheel range, clutch pedal, H-shifter)\n\
 -r, --range=degrees         Set wheel rotation range (up to 900 degrees).\n\
                             Note:\n\
@@ -346,13 +515,16 @@ int main (int argc, char **argv)
     unsigned short int range = 0;
     unsigned short int centerforce = 0;
     unsigned short int gain = 0;
+    int do_validate_wheel = 0;
     int do_native = 0;
     int do_range = 0;
     int do_autocenter = 0;
     int do_alt_autocenter = 0;
     int do_gain = 0;
+    int do_list = 0;
     int rampspeed = -1;
     char device_file_name[128];
+    char shortname[255];
     memset(device_file_name, 0, sizeof(device_file_name));
     verbose_flag = 0;
 
@@ -360,9 +532,11 @@ int main (int argc, char **argv)
     {
         {"verbose",    no_argument,       0,             'v'},
         {"help",       no_argument,       0,             'h'},
+        {"list",       no_argument,       0,             'l'},
+        {"wheel",      required_argument, 0,             'w'},
         {"nativemode", no_argument,       0,             'n'},
         {"range",      required_argument, 0,             'r'},
-        {"altautocenter", required_argument, 0,             'b'},
+        {"altautocenter", required_argument, 0,          'b'},
         {"autocenter", required_argument, 0,             'a'},
         {"rampspeed",  required_argument, 0,             's'},
         {"gain",       required_argument, 0,             'g'},
@@ -372,7 +546,7 @@ int main (int argc, char **argv)
 
     while (optind < argc) {
         int index = -1;
-        int result = getopt_long (argc, argv, "vhnr:a:g:d:s:b:",
+        int result = getopt_long (argc, argv, "vhlw:nr:a:g:d:s:b:",
                                   long_options, &index);
         
         if (result == -1)
@@ -409,6 +583,13 @@ int main (int argc, char **argv)
                 case 'd':
                     strncpy(device_file_name, optarg, 128);
                     break;
+                case 'l':
+                    do_list = 1;
+                    break;
+                case 'w':
+                    strncpy(shortname, optarg, 255);
+                    do_validate_wheel = 1;
+                    break;
                 case '?':
                 default:
                     help();
@@ -421,43 +602,75 @@ int main (int argc, char **argv)
     {
         libusb_init(NULL);
         int wait_for_udev = 0;
-        if (do_native) {
-            set_native_mode();
-            wait_for_udev = 1;
-        }
-        
-        if (do_range) {
-            set_range(range);
-            wait_for_udev = 1;
-        }
-        
-        if (do_autocenter) {
-            if (rampspeed != -1) {
-                set_autocenter(centerforce, rampspeed);
-                wait_for_udev = 1;
-            } else {
-                printf("Please provide '--rampspeed' parameter\n");
-            } 
-        }
-        
-        if (do_alt_autocenter) {
-            if (strlen(device_file_name)) {
-                alt_set_autocenter(centerforce, device_file_name, wait_for_udev);
-                wait_for_udev = 0;
-            } else {
-                printf("Please provide the according event interface for your wheel using '--device' parameter (E.g. '--device /dev/input/event0')\n");
-            } 
-        }
-        
-        if (do_gain) {
-            if (strlen(device_file_name)) {
-                set_gain(gain, device_file_name, wait_for_udev);
-                wait_for_udev = 0;
-            } else {
-                printf("Please provide the according event interface for your wheel using '--device' parameter (E.g. '--device /dev/input/event0')\n");
-            }    
-        }
-        
+        int wheelIndex = -1;
+
+        if (do_list) {
+            // list all devices, ignore other options...
+            list_devices();
+        } else {
+            if (do_validate_wheel) {
+                int i = 0;
+                for (i=0; i < PIDs_END; i++) {
+                    if (strncmp(wheels[i].shortname, shortname, 255) == 0) {
+                        // found matching wheel
+                        wheelIndex = i;
+                        break;
+                    }
+                }
+                if (wheelIndex == -1) {
+                    printf("Wheel \"%s\" not supported. Did you spell the shortname correctly?\n", shortname);
+                }
+            }
+            
+            if (do_native) {
+                if (wheelIndex == -1) {
+                    printf("Please provide --wheel parameter!\n");
+                } else {
+                    set_native_mode(wheelIndex);
+                    wait_for_udev = 1;
+                }
+            }
+            
+            if (do_range) {
+                if (wheelIndex == -1) {
+                    printf("Please provide --wheel parameter!\n");
+                } else {
+                    set_range(wheelIndex, range);
+                    wait_for_udev = 1;
+                }
+            }
+            
+            if (do_autocenter) {
+                if (wheelIndex == -1) {
+                    printf("Please provide --wheel parameter!\n");
+                } else {
+                    if (rampspeed == -1) {
+                        printf("Please provide '--rampspeed' parameter\n");
+                    } else {
+                        set_autocenter(wheelIndex, centerforce, rampspeed);
+                        wait_for_udev = 1;
+                    }
+                } 
+            }
+            
+            if (do_alt_autocenter) {
+                if (strlen(device_file_name)) {
+                    alt_set_autocenter(centerforce, device_file_name, wait_for_udev);
+                    wait_for_udev = 0;
+                } else {
+                    printf("Please provide the according event interface for your wheel using '--device' parameter (E.g. '--device /dev/input/event0')\n");
+                } 
+            }
+            
+            if (do_gain) {
+                if (strlen(device_file_name)) {
+                    set_gain(gain, device_file_name, wait_for_udev);
+                    wait_for_udev = 0;
+                } else {
+                    printf("Please provide the according event interface for your wheel using '--device' parameter (E.g. '--device /dev/input/event0')\n");
+                }    
+            }
+        }        
         libusb_exit(NULL);
     } else {
         // display usage information if no arguments given
