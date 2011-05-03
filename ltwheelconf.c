@@ -304,7 +304,7 @@ int set_range(int wheelIndex, unsigned short int range) {
     
     // Build up command to set range.
     
-    // check if we know how to set native range
+    // check if we know how to set range
     if (!w.cmd_range_prefix) {
         printf( "Sorry, do not know how to set rotation range for %s.\n", w.name);
         return -1;
@@ -313,7 +313,7 @@ int set_range(int wheelIndex, unsigned short int range) {
     // FIXME - This cmd_range_prefix stuff is really ugly for now...
     unsigned char setrange[] = { w.cmd_range_prefix[0], w.cmd_range_prefix[1], range & 0x00ff , (range & 0xff00)>>8, 0x00, 0x00, 0x00 };
     
-    // send command to switch wheel to native mode
+    // send command to change range
     send_command(handle, setrange);
     printf ("Wheel rotation range of %s is now set to %d degrees.\n", w.name, range);
     return 0;
@@ -361,28 +361,6 @@ int set_autocenter(int wheelIndex, int centerforce, int rampspeed)
     
     printf ("Autocenter for %s is now set to %d with rampspeed %d.\n", w.name, centerforce, rampspeed);
     return 0;
-    
-/*    
-    // probe for a G25 (already set to nativemode)
-    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, PID_G25 );
-    if ( handle != NULL ) {
-        unsigned char cmd[] = { 0xfe, 0x0b, rampspeed & 0x0f , rampspeed & 0x0f, centerforce & 0xff, 0x00, 0x00, 0x00 };
-        send_command(handle, cmd);
-    } else {
-        // probe for a DFP (already set to nativemode)
-        handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, PID_DRIVINGFORCEPRO );
-        if ( handle != NULL ) {
-            unsigned char cmd[] = { 0xfe, 0x0b, rampspeed & 0x0f , rampspeed & 0x0f, centerforce & 0xff, 0x00, 0x00, 0x00 };
-            send_command(handle, cmd);
-        } else {
-            printf ( "No suitable wheel (DFP/G25/G27) found. Make sure your wheel is set to native mode.\n" );
-            return -1;
-        }
-    }
-    
-    printf ("Wheel autocenter is now set to %d with rampspeed %d.\n", centerforce, rampspeed);
-    return 0;
-*/
 }
 
 /*
@@ -496,15 +474,15 @@ Note: You can freely combine all configuration options.\n\
 \n\
 Examples:\n\
 Put wheel into native mode:\n\
-$ sudo ltwheelconf --nativemode\n\
+$ sudo ltwheelconf --wheel G25 --nativemode\n\
 Set wheel rotation range to 900 degree:\n\
-$ sudo ltwheelconf --range 900 \n\
+$ sudo ltwheelconf --wheel G27 --range 900 \n\
 Set moderate autocenter:\n\
-$ sudo ltwheelconf --autocenter 100 --rampspeed 1\n\
+$ sudo ltwheelconf --wheel DFP --autocenter 100 --rampspeed 1\n\
 Disable autocenter completely:\n\
-$ sudo ltwheelconf --autocenter 0 --rampspeed 0\n\
+$ sudo ltwheelconf --wheel G25 --autocenter 0 --rampspeed 0\n\
 Set native mode, disable autocenter and set wheel rotation range of 540 degrees in one call:\n\
-$ sudo ltwheelconf --nativemode --range 540 --autocenter 0 --rampspeed 0\n\
+$ sudo ltwheelconf --wheel G25 --nativemode --range 540 --autocenter 0 --rampspeed 0\n\
 \n\
 Contact: michael@m-bauer.org\n\
 \n");
