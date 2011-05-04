@@ -484,10 +484,13 @@ General Options: \n\
 -l, --list                  List all found/supported devices\n\
 \n\
 Wheel configuration: \n\
--w, --wheel=shortname       Which wheel is connected. Possible values:\n\
-                                -> DFP\n\
-                                -> G25\n\
-                                -> G27\n\
+-w, --wheel=shortname       Which wheel is connected. Supported values:\n\
+                                -> 'DF'   (Driving Force)\n\
+                                -> 'MF'   (Momo Force)\n\
+                                -> 'DFP'  (Driving Force Pro)\n\
+                                -> 'DFGT' (Driving Force GT)\n\
+                                -> 'G25'  (G25)\n\
+                                -> 'G27'  (G27)\n\
 -n, --nativemode            Set wheel to native mode (separate axes, full wheel range, clutch pedal, H-shifter)\n\
 -r, --range=degrees         Set wheel rotation range (up to 900 degrees).\n\
                             Note:\n\
