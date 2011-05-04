@@ -28,7 +28,7 @@
 #include <fcntl.h>
 #include <string.h>
 
-#define VERSION "0.2.1"
+#define VERSION "0.2.2"
 
 #define VID_LOGITECH 0x046d
 #define PID_DRIVINGFORCE 0xc294
@@ -50,13 +50,21 @@ enum PIDIndex {
     PIDs_END
 };
 
+
+typedef struct {
+    // reserve space for max. 4 command strings, 8 chars each
+    unsigned char cmds[4][8];
+    // how many command strings are actually used
+    unsigned int numCmds;
+} cmdstruct;
+
 typedef struct {
     unsigned int idx;
     char shortname[255];
     char name[255];
     unsigned int restricted_pid;
     unsigned int native_pid;
-    unsigned char cmd_native[8];
+    cmdstruct cmd_native;
     unsigned char cmd_range_prefix[2]; // FIXME - This is just a hack...
     unsigned char cmd_autocenter_prefix[2]; // FIXME - This is just a hack...
 }wheelstruct;
@@ -68,7 +76,7 @@ static const wheelstruct wheels[] = {
         "Driving Force", 
         0xc294,
         0xc294,
-        {0},
+        { { {0} },0 },
         {0},
         {0}
     },
@@ -78,7 +86,7 @@ static const wheelstruct wheels[] = {
         "Momo Force", 
         0xc294,
         0xc295,
-        {0},
+        { { {0} },0 },
         {0},
         {0}
     }, 
@@ -88,7 +96,12 @@ static const wheelstruct wheels[] = {
         "Driving Force Pro",
         0xc294,
         0xc298,
-        { 0xf8, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00 },
+        {
+            { 
+                { 0xf8, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00 },
+            },
+            1
+        },
         { 0xf8, 0x03 },
         { 0xfe, 0x0b }
     },
@@ -98,7 +111,12 @@ static const wheelstruct wheels[] = {
         "G25", 
         0xc294,
         0xc299,
-        { 0xf8, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00 },
+        {
+            { 
+                { 0xf8, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00 },
+            },
+            1
+        },
         { 0xf8, 0x81 },
         { 0xfe, 0x0b }
     }, 
@@ -108,7 +126,7 @@ static const wheelstruct wheels[] = {
         "Driving Force GT", 
         0xc294,
         0xc29A,
-        {0},
+        { { {0} },0 },
         {0},
         {0}
     },
@@ -118,9 +136,13 @@ static const wheelstruct wheels[] = {
         "G27", 
         0xc294,
         0xc29B,
-        // FIXME: It seems this is putting the G27 into kind of G25 mode instead of real native mode, meaning the additional 
-        // buttons on the wheel do not work. Need to get hands on a real device...
-        { 0xf8, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00 },
+        {
+            { 
+                { 0xf8, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00 }, 
+                { 0xf8, 0x09, 0x04, 0x01, 0x00, 0x00, 0x00 }
+            },
+            2
+        },
         { 0xf8, 0x81 },
         { 0xfe, 0x0b }
     },
@@ -132,7 +154,7 @@ static const wheelstruct wheels[] = {
         "",
         0,
         0,
-        {0},
+        { { {0} },0 },
         {0},
         {0}
     }
@@ -188,7 +210,12 @@ void list_devices() {
 /*
  * Send custom command to USB device using interrupt transfer
  */
-int send_command(libusb_device_handle *handle, unsigned char command[8] ) {
+int send_command(libusb_device_handle *handle, cmdstruct command ) {
+    
+    if (command.numCmds == 0) {
+        printf( "send_command: Empty command provided! Not sending anything...\n");
+        return 0;
+    }
 
     int stat;
     stat = libusb_detach_kernel_driver(handle, 0);
@@ -198,8 +225,13 @@ int send_command(libusb_device_handle *handle, unsigned char command[8] ) {
     if ( (stat < 0) || verbose_flag) perror("Claiming USB interface");
 
     int transferred = 0;
-    stat = libusb_interrupt_transfer( handle, 1, command, sizeof( command ), &transferred, TRANSFER_WAIT_TIMEOUT_MS );
-    if ( (stat < 0) || verbose_flag) perror("Sending USB command");
+    
+    // send all command strings provided in command
+    int cmdCount;
+    for (cmdCount=0; cmdCount < command.numCmds; cmdCount++) {
+        stat = libusb_interrupt_transfer( handle, 1, command.cmds[cmdCount], sizeof( command.cmds[cmdCount] ), &transferred, TRANSFER_WAIT_TIMEOUT_MS );
+        if ( (stat < 0) || verbose_flag) perror("Sending USB command");
+    }
 
     /* In case the command just sent caused the device to switch from restricted mode to native mode
      * the following two commands will fail due to invalid device handle (because the device changed
@@ -256,7 +288,7 @@ int set_native_mode(int wheelIndex) {
     }
     
     // check if we know how to set native mode
-    if (!w.cmd_native) {
+    if (!w.cmd_native.numCmds) {
         printf( "Sorry, do not know how to set %s into native mode.\n", w.name);
         return -1;
     }
@@ -311,8 +343,12 @@ int set_range(int wheelIndex, unsigned short int range) {
     }
     
     // FIXME - This cmd_range_prefix stuff is really ugly for now...
-    unsigned char setrange[] = { w.cmd_range_prefix[0], w.cmd_range_prefix[1], range & 0x00ff , (range & 0xff00)>>8, 0x00, 0x00, 0x00 };
-    
+    cmdstruct setrange = {
+        { 
+            { w.cmd_range_prefix[0], w.cmd_range_prefix[1], range & 0x00ff , (range & 0xff00)>>8, 0x00, 0x00, 0x00 }
+        },
+        1,
+    };
     // send command to change range
     send_command(handle, setrange);
     printf ("Wheel rotation range of %s is now set to %d degrees.\n", w.name, range);
@@ -355,9 +391,14 @@ int set_autocenter(int wheelIndex, int centerforce, int rampspeed)
     }
     
     // FIXME - This cmd_autocenter_prefix stuff is really ugly for now...
-    unsigned char cmd[] = { w.cmd_autocenter_prefix[0], w.cmd_autocenter_prefix[1], rampspeed & 0x0f , rampspeed & 0x0f, centerforce & 0xff, 0x00, 0x00, 0x00 };
+    cmdstruct command = {
+        { 
+            { w.cmd_autocenter_prefix[0], w.cmd_autocenter_prefix[1], rampspeed & 0x0f , rampspeed & 0x0f, centerforce & 0xff, 0x00, 0x00, 0x00 }
+        },
+        1,
+    };
     
-    send_command(handle, cmd);
+    send_command(handle, command);
     
     printf ("Autocenter for %s is now set to %d with rampspeed %d.\n", w.name, centerforce, rampspeed);
     return 0;
