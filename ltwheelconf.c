@@ -386,7 +386,7 @@ int set_autocenter(int wheelIndex, int centerforce, int rampspeed)
     
     // check if we know how to set native range
     if (!w.cmd_autocenter_prefix) {
-        printf( "Sorry, do not know how to set autocenter range for %s. Please try generic implementation using --alt_autocenter.\n", w.name);
+        printf( "Sorry, do not know how to set autocenter force for %s. Please try generic implementation using --alt_autocenter.\n", w.name);
         return -1;
     }
     
