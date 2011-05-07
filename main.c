@@ -175,10 +175,7 @@ int main (int argc, char **argv)
                     do_validate_wheel = 1;
                     break;
                 case '?':
-                    do_help = 1;
-                    break;
                 default:
-                    printf("\nGot unknown parameter.\n");
                     do_help = 1;
                     break;
             }
