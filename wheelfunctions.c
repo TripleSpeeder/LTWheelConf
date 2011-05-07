@@ -35,11 +35,8 @@
 /* Globals */
 extern int verbose_flag;
 
-/*
- * Search and list all known/supported wheels
- */
+
 void list_devices() {
-    
     libusb_device_handle *handle = 0;
     libusb_device *dev = 0;
     struct libusb_device_descriptor desc;
@@ -75,11 +72,8 @@ void list_devices() {
     printf("Found %d devices.\n", numFound);
 }
 
-/*
- * Send custom command to USB device using interrupt transfer
- */
+
 int send_command(libusb_device_handle *handle, cmdstruct command ) {
-    
     if (command.numCmds == 0) {
         printf( "send_command: Empty command provided! Not sending anything...\n");
         return 0;
@@ -124,22 +118,7 @@ int send_command(libusb_device_handle *handle, cmdstruct command ) {
     return 0;
 }
 
-/*
- * Logitech wheels are in a kind of restricted mode when initially connected via usb.
- * In this restricted mode 
- *  - axes for throttle and brake are always combined
- *  - rotation range is limited to 300 degrees
- *  - clutch pedal of G25/G27 does not work
- *  - H-gate shifter of G25/G27 does not work
- * 
- * In restricted mode the wheels register on USB with pid 0xc294.
- * In native mode they register on USB with pid 0xc298 (DFP) or 0xc299 (G25/G27)
- * 
- * This function takes care to switch the wheel to "native" mode with no restrictions.
- * 
- */
 int set_native_mode(int wheelIndex) {
-    
     wheelstruct w = wheels[wheelIndex];
 
     // first check if wheel has native mode at all
@@ -188,12 +167,7 @@ int set_native_mode(int wheelIndex) {
 }
     
 
-/*
- * Set maximum rotation range of wheel in degrees
- * G25/G27/DFP support up to 900 degrees.
- */
 int set_range(int wheelIndex, unsigned short int range) {
-    
     wheelstruct w = wheels[wheelIndex];
     
     libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.native_pid );
@@ -225,19 +199,6 @@ int set_range(int wheelIndex, unsigned short int range) {
 }
 
 
-/*
- * Native method to set autcenter behaviour of LT wheels.
- * 
- * Based on a post by "anrp" on the vdrift forum:
- * http://vdrift.net/Forum/viewtopic.php?t=412&postdays=0&postorder=asc&start=60
- * 
- * fe0b0101ff - centering spring, slow spring ramp 
- * ____^^____ - left ramp speed 
- * ______^^__ - right ramp speed 
- * ________^^ - overall strength 
- * 
- * Rampspeed seems to be limited to 0-7 only.
- */
 int set_autocenter(int wheelIndex, int centerforce, int rampspeed)
 {
     if (verbose_flag) printf ( "Setting autocenter...");
@@ -272,15 +233,7 @@ int set_autocenter(int wheelIndex, int centerforce, int rampspeed)
     return 0;
 }
 
-/*
- * Generic method to set autocenter force of any wheel device recognized by kernel
- * This method does not allow to set the rampspeed and force individually.
- * 
- * Looking at hid-lgff.c i think the kernel driver actually might do the wrong thing by modifying 
- * the rampspeed instead of the general force...?
- */
-int alt_set_autocenter(int centerforce, char *device_file_name, int wait_for_udev)
-{
+int alt_set_autocenter(int centerforce, char *device_file_name, int wait_for_udev) {
     if (verbose_flag) printf ( "Device %s: Setting autocenter force to %d.\n", device_file_name, centerforce );
     
     /* sleep UDEV_WAIT_SEC seconds to allow udev to set up device nodes due to kernel 
@@ -309,8 +262,8 @@ int alt_set_autocenter(int centerforce, char *device_file_name, int wait_for_ude
     return 0;
 }
 
-int set_gain(int gain, char *device_file_name, int wait_for_udev)
-{
+
+int set_gain(int gain, char *device_file_name, int wait_for_udev) {
     if (verbose_flag) printf ( "Device %s: Setting FF gain to %d.\n", device_file_name, gain);
     
     /* sleep UDEV_WAIT_SEC seconds to allow udev to set up device nodes due to kernel 
