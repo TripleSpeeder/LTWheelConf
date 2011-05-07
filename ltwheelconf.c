@@ -538,7 +538,10 @@ int main (int argc, char **argv)
                 if (wheelIndex == -1) {
                     printf("Please provide --wheel parameter!\n");
                 } else {
-                    if (rampspeed == -1) {
+                    if (centerforce == 0) {
+                        set_autocenter(wheelIndex, centerforce, 0);
+                        wait_for_udev = 1;
+                    } else if (rampspeed == -1) {
                         printf("Please provide '--rampspeed' parameter\n");
                     } else {
                         set_autocenter(wheelIndex, centerforce, rampspeed);
