@@ -1,5 +1,5 @@
 OBJS=main.o wheelfunctions.o
-LIBS=usb
+LIBS=usb-1.0
 
 all: ltwheelconf
 
