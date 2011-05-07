@@ -1,10 +1,13 @@
 This tool allows you to change various settings of the Logitech racing wheels
--> Driving Force Pro (DFP)
+-> Driving Force
+-> Momo Force
+-> Driving Force Pro
+-> Driving Force GT
 -> G25
 -> G27
 
 Available options:
--> set wheel to "native" mode (support separate axes and clutch pedal, full 900 degree rotation)
+-> set wheel to "native" mode (support separate axes and clutch pedal, H shifter, full 900 degree rotation)
 -> Set wheel rotation range
 -> Set autocenter force and rampspeed
 -> Set ForceFeedback gain
