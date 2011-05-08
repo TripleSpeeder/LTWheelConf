@@ -300,4 +300,14 @@ int set_gain(int gain, char *device_file_name, int wait_for_udev) {
     return 0;
 }
 
+int reset_wheel(int wheelIndex)
+{
+    wheelstruct w = wheels[wheelIndex];
+    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.native_pid );
+    if ( handle == NULL ) {
+        printf ( "%s not found. Make sure it is set to native mode (use --native).\n", w.name);
+        return -1;
+    }
+    return libusb_reset_device(handle);
+}
 

@@ -85,5 +85,9 @@ int alt_set_autocenter(int centerforce, char *device_file_name, int wait_for_ude
  */
 int set_gain(int gain, char *device_file_name, int wait_for_udev);
 
+/*
+ * Reset the wheel, similar like unplug-replug cycle
+ */
+int reset_wheel(int wheelindex);
 
 #endif

@@ -23,6 +23,7 @@
 #define wheels_h
 
 #define VID_LOGITECH 0x046d
+
 #define PID_DRIVINGFORCE 0xc294
 #define PID_MOMOFORCE 0xc295
 #define PID_DRIVINGFORCEPRO 0xc298

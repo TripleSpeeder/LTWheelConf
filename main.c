@@ -46,33 +46,36 @@ void help() {
     \n\
     Wheel configuration: \n\
     -w, --wheel=shortname       Which wheel is connected. Supported values:\n\
-    -> 'DF'   (Driving Force)\n\
-    -> 'MF'   (Momo Force)\n\
-    -> 'DFP'  (Driving Force Pro)\n\
-    -> 'DFGT' (Driving Force GT)\n\
-    -> 'G25'  (G25)\n\
-    -> 'G27'  (G27)\n\
+        -> 'DF'   (Driving Force)\n\
+        -> 'MF'   (Momo Force)\n\
+        -> 'DFP'  (Driving Force Pro)\n\
+        -> 'DFGT' (Driving Force GT)\n\
+        -> 'G25'  (G25)\n\
+        -> 'G27'  (G27)\n\
     -n, --nativemode            Set wheel to native mode (separate axes, full wheel range, clutch pedal, H-shifter)\n\
+    -x, --reset                 Reset the wheel. This is basically the same like unplugging & replugging it.\n\
+                                Note:\n\
+                                    -> Requires wheel to be in native (-n) mode!\n\
     -r, --range=degrees         Set wheel rotation range (up to 900 degrees).\n\
-    Note:\n\
-    -> Requires wheel to be in native (-n) mode!\n\
+                                Note:\n\
+                                    -> Requires wheel to be in native (-n) mode!\n\
     -a, --autocenter=value      Set autocenter bypassing hid driver. Value should be between 0 and 255 (0 -> no autocenter, 255 -> max autocenter force). \n\
-    Together with the rampspeed setting this allows much finer control of the autocenter behaviour as using the generic input interface.\n\
-    Note: \n\
-    -> Requires parameter '--rampspeed'\n\
+                                Together with the rampspeed setting this allows much finer control of the autocenter behaviour as using the generic input interface.\n\
+                                Note: \n\
+                                    -> Requires parameter '--rampspeed'\n\
     -s, --rampspeed             Use in conjuntion with the --autocenter parameter. Specify how fast the autocenter force should increase when rotating wheel.\n\
-    Value should be between 0 and 7\n\
-    Low value means the centering force is increasing only slightly when turning the wheel.\n\
-    High value means the centering force is increasing very fast when turning the wheel.\n\
+                                Value should be between 0 and 7\n\
+                                Low value means the centering force is increasing only slightly when turning the wheel.\n\
+                                High value means the centering force is increasing very fast when turning the wheel.\n\
     -b, --altautocenter=value   Set autocenter force using generic input interface. Value should be between 0 and 100 (0 -> no autocenter, 100 -> max autocenter force). \n\
-    Use this if --autocenter does not work for your device.\n\
-    Note: \n\
-    -> Requires parameter '--device' to specify the input device\n\
-    -> Only works with kernel >= 2.6.39\n\
-    -> The rampspeed can not be influenced using this method\n\
+                                Use this if --autocenter does not work for your device.\n\
+                                Note: \n\
+                                    -> Requires parameter '--device' to specify the input device\n\
+                                    -> Only works with kernel >= 2.6.39\n\
+                                    -> The rampspeed can not be influenced using this method\n\
     -g, --gain=value            Set forcefeedback gain. Value should be between 0 and 100 (0 -> no gain, 100 -> max gain). \n\
-    Note: \n\
-    -> Requires parameter '--device' to specify the input device\n\
+                                Note: \n\
+                                    -> Requires parameter '--device' to specify the input device\n\
     -d, --device=inputdevice    Specify inputdevice for force-feedback related configuration (--gain and --altautocenter)\n\
     \n\
     Note: You can freely combine all configuration options.\n\
@@ -107,6 +110,7 @@ int main (int argc, char **argv)
     int do_list = 0;
     int rampspeed = -1;
     int do_help = 0;
+    int do_reset = 0;
     char device_file_name[128];
     char shortname[255];
     memset(device_file_name, 0, sizeof(device_file_name));
@@ -125,12 +129,13 @@ int main (int argc, char **argv)
         {"rampspeed",       required_argument, 0,               's'},
         {"gain",            required_argument, 0,               'g'},
         {"device",          required_argument, 0,               'd'},
+        {"reset",           no_argument,       0,               'x'},
         {0,                 0,                 0,               0  }
     };
     
     while (optind < argc) {
         int index = -1;
-        int result = getopt_long (argc, argv, "vhlw:nr:a:g:d:s:b:",
+        int result = getopt_long (argc, argv, "vhlw:nr:a:g:d:s:b:x",
                                   long_options, &index);
         
         if (result == -1)
@@ -174,6 +179,9 @@ int main (int argc, char **argv)
                     strncpy(shortname, optarg, 255);
                     do_validate_wheel = 1;
                     break;
+                case 'x':
+                    do_reset = 1;
+                    break;
                 case '?':
                 default:
                     do_help = 1;
@@ -205,6 +213,15 @@ int main (int argc, char **argv)
                 }
                 if (wheelIndex == -1) {
                     printf("Wheel \"%s\" not supported. Did you spell the shortname correctly?\n", shortname);
+                }
+            }
+
+            if (do_reset) {
+                if (wheelIndex == -1) {
+                    printf("Please provide --wheel parameter!\n");
+                } else {
+                    reset_wheel(wheelIndex);
+                    wait_for_udev = 1;
                 }
             }
             
