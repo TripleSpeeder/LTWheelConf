@@ -35,6 +35,9 @@
 /* Globals */
 extern int verbose_flag;
 
+void print_cmd(char *result, unsigned char cmd[8]) {
+    sprintf(result, "%02X %02X %02X %02X %02X %02X %02X %02X", cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], cmd[6], cmd[7]);
+}
 
 void list_devices() {
     libusb_device_handle *handle = 0;
@@ -91,6 +94,11 @@ int send_command(libusb_device_handle *handle, cmdstruct command ) {
     // send all command strings provided in command
     int cmdCount;
     for (cmdCount=0; cmdCount < command.numCmds; cmdCount++) {
+        if (verbose_flag) {
+            char raw_string[255];
+            print_cmd(raw_string, command.cmds[cmdCount]);
+            printf("\tSending string:   \"%s\"\n", raw_string);
+        }
         stat = libusb_interrupt_transfer( handle, 1, command.cmds[cmdCount], sizeof( command.cmds[cmdCount] ), &transferred, TRANSFER_WAIT_TIMEOUT_MS );
         if ( (stat < 0) || verbose_flag) perror("Sending USB command");
     }
