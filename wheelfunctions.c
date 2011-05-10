@@ -39,18 +39,21 @@ void print_cmd(char *result, unsigned char cmd[8]) {
     sprintf(result, "%02X %02X %02X %02X %02X %02X %02X %02X", cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5], cmd[6], cmd[7]);
 }
 
+
 void list_devices() {
     libusb_device_handle *handle = 0;
     libusb_device *dev = 0;
     struct libusb_device_descriptor desc;
+    memset(&desc, 0, sizeof(desc));
     unsigned char descString[255];
     memset(&descString, 0, sizeof(descString));
+    int numWheels = sizeof(wheels)/sizeof(wheelstruct);
 
     int numFound = 0;
-    int PIDIndex = 0;
-    wheelstruct w = wheels[PIDIndex];
-    for (PIDIndex = 0; PIDIndex < PIDs_END; PIDIndex++) {
-        w = wheels[PIDIndex];
+    int i = 0;
+    wheelstruct w = wheels[i];
+    for (i = 0; i < numWheels; i++) {
+        w = wheels[i];
         printf("Scanning for \"%s\": ", w.name);
         handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.native_pid);
         if (handle != 0) {
@@ -126,7 +129,8 @@ int send_command(libusb_device_handle *handle, cmdstruct command ) {
     return 0;
 }
 
-int set_native_mode(int wheelIndex) {
+int set_native_mode(int wheelIndex)
+{
     wheelstruct w = wheels[wheelIndex];
 
     // first check if wheel has native mode at all
@@ -142,12 +146,6 @@ int set_native_mode(int wheelIndex) {
         return 0;
     }
 
-    // check if we know how to set native mode
-    if (!w.cmd_native.numCmds) {
-        printf( "Sorry, do not know how to set %s into native mode.\n", w.name);
-        return -1;
-    }
-
     // try to get handle to device in restricted mode
     handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.restricted_pid );
     if ( handle == NULL ) {
@@ -155,8 +153,16 @@ int set_native_mode(int wheelIndex) {
         return -1;
     }
 
-    // finally send command to switch wheel to native mode
-    send_command(handle, w.cmd_native);
+    // check if we know how to set native mode
+    if (!w.get_nativemode_cmd) {
+        printf( "Sorry, do not know how to set %s into native mode.\n", w.name);
+        return -1;
+    }
+
+    cmdstruct c;
+    memset(&c, 0, sizeof(c));
+    w.get_nativemode_cmd(&c);
+    send_command(handle, c);
 
     // wait until wheel reconfigures to new PID...
     sleep(CONFIGURE_WAIT_SEC);
@@ -175,7 +181,8 @@ int set_native_mode(int wheelIndex) {
 }
 
 
-int set_range(int wheelIndex, unsigned short int range) {
+int set_range(int wheelIndex, unsigned short int range)
+{
     wheelstruct w = wheels[wheelIndex];
 
     libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.native_pid );
@@ -184,23 +191,16 @@ int set_range(int wheelIndex, unsigned short int range) {
         return -1;
     }
 
-    // Build up command to set range.
-
-    // check if we know how to set range
-    if (!w.cmd_range_prefix) {
+    if (!w.get_range_cmd) {
         printf( "Sorry, do not know how to set rotation range for %s.\n", w.name);
         return -1;
     }
 
-    // FIXME - This cmd_range_prefix stuff is really ugly for now...
-    cmdstruct setrange = {
-        {
-            { w.cmd_range_prefix[0], w.cmd_range_prefix[1], range & 0x00ff , (range & 0xff00)>>8, 0x00, 0x00, 0x00 }
-        },
-        1,
-    };
-    // send command to change range
-    send_command(handle, setrange);
+    cmdstruct c;
+    memset(&c, 0, sizeof(c));
+    w.get_range_cmd(&c, range);
+    send_command(handle, c);
+
     printf ("Wheel rotation range of %s is now set to %d degrees.\n", w.name, range);
     return 0;
 
@@ -209,8 +209,6 @@ int set_range(int wheelIndex, unsigned short int range) {
 
 int set_autocenter(int wheelIndex, int centerforce, int rampspeed)
 {
-    if (verbose_flag) printf ( "Setting autocenter...");
-
     wheelstruct w = wheels[wheelIndex];
 
     libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.native_pid );
@@ -219,23 +217,15 @@ int set_autocenter(int wheelIndex, int centerforce, int rampspeed)
         return -1;
     }
 
-    // Build up command to set range.
-
-    // check if we know how to set native range
-    if (!w.cmd_autocenter_prefix) {
+    if (!w.get_autocenter_cmd) {
         printf( "Sorry, do not know how to set autocenter force for %s. Please try generic implementation using --alt_autocenter.\n", w.name);
         return -1;
     }
 
-    // FIXME - This cmd_autocenter_prefix stuff is really ugly for now...
-    cmdstruct command = {
-        {
-            { w.cmd_autocenter_prefix[0], w.cmd_autocenter_prefix[1], rampspeed & 0x0f , rampspeed & 0x0f, centerforce & 0xff, 0x00, 0x00, 0x00 }
-        },
-        1,
-    };
-
-    send_command(handle, command);
+    cmdstruct c;
+    memset(&c, 0, sizeof(c));
+    w.get_autocenter_cmd(&c, centerforce, rampspeed);
+    send_command(handle, c);
 
     printf ("Autocenter for %s is now set to %d with rampspeed %d.\n", w.name, centerforce, rampspeed);
     return 0;

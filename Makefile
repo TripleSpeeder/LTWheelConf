@@ -1,4 +1,4 @@
-OBJS=main.o wheelfunctions.o
+OBJS=main.o wheelfunctions.o wheels.o
 LIBS=usb-1.0
 
 all: ltwheelconf
@@ -8,6 +8,10 @@ ltwheelconf: $(OBJS)
 
 main.o: main.c
 	gcc -Wall -c main.c
+
+wheels.o: wheels.c wheels.h
+	gcc -Wall -c wheels.c
+
 
 wheelfunctions.o: wheelfunctions.c wheelfunctions.h wheels.h
 	gcc -Wall -c wheelfunctions.c

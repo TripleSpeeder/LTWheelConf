@@ -30,10 +30,10 @@
  * Based on a post by "anrp" on the vdrift forum:
  * http://vdrift.net/Forum/viewtopic.php?t=412&postdays=0&postorder=asc&start=60
  *
- * fe0b0101ff - centering spring, slow spring ramp
- * ____^^____ - left ramp speed
- * ______^^__ - right ramp speed
- * ________^^ - overall strength
+ *  fe0b0101ff - centering spring, slow spring ramp
+ *  ____^^____ - left ramp speed
+ *  ______^^__ - right ramp speed
+ *  ________^^ - overall strength
  *
  * Rampspeed seems to be limited to 0-7 only.
  */
