@@ -112,7 +112,7 @@ static const wheelstruct wheels[] = {
             1
         },
         { 0xf8, 0x81 },
-        { 0xfe, 0x0b }
+        { 0xfe, 0x0d }
     }, 
     { 
         DRIVINGFORCEGT,
