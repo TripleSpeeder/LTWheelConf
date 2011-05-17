@@ -203,8 +203,9 @@ int main (int argc, char **argv)
             list_devices();
         } else {
             if (do_validate_wheel) {
+                int numWheels = sizeof(wheels)/sizeof(wheelstruct);
                 int i = 0;
-                for (i=0; i < PIDs_END; i++) {
+                for (i=0; i < numWheels; i++) {
                     if (strncmp(wheels[i].shortname, shortname, 255) == 0) {
                         // found matching wheel
                         wheelIndex = i;
