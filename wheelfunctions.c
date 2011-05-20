@@ -72,6 +72,7 @@ void list_devices() {
             } else {
                 perror ("Get device");
             }
+            libusb_close(handle);
         }
         printf("\n");
     }

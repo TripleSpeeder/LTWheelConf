@@ -42,6 +42,7 @@ void help() {
     General Options: \n\
     -h, --help                  This help text\n\
     -v, --verbose               Verbose output\n\
+                                Use -vv to get debug messages from libusb\n\
     -l, --list                  List all found/supported devices\n\
     \n\
     Wheel configuration: \n\
@@ -143,7 +144,7 @@ int main (int argc, char **argv)
             
             switch (result) {
                 case 'v':
-                    verbose_flag = 1;
+                    verbose_flag++;
                     break;
                 case 'n':
                     do_native = 1;
@@ -193,6 +194,9 @@ int main (int argc, char **argv)
     if (argc > 1)
     {
         libusb_init(NULL);
+        if (verbose_flag > 1)
+            libusb_set_debug(0, 3);
+        
         int wait_for_udev = 0;
         int wheelIndex = -1;
         
