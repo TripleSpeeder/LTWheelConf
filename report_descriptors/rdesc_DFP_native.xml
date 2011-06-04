@@ -39,49 +39,29 @@
         <variable/>
         <null_state/>
       </input>
-      <report_size>1</report_size>
-      <report_count>8</report_count>
       <unit>
         <none/>
       </unit>
-      <usage_page>FF00<!-- FF00h, vendor-defined --></usage_page>
-      <logical_maximum>1</logical_maximum>
-      <physical_maximum>1</physical_maximum>
-      <usage>01</usage>
-      <input>
-        <variable/>
-      </input>
-      <usage_page>desktop<!-- Generic desktop controls (01h) --></usage_page>
-      <report_count>1</report_count>
-      <report_size>8</report_size>
-      <logical_minimum>0</logical_minimum>
       <logical_maximum>255</logical_maximum>
-      <physical_minimum>0</physical_minimum>
       <physical_maximum>255</physical_maximum>
+      <report_size>8</report_size>
+      <input>
+        <constant/>
+      </input>
       <usage>desktop_y<!-- Y (31h, dynamic value) --></usage>
       <input>
         <variable/>
       </input>
-      <report_count>1</report_count>
-      <report_size>8</report_size>
-      <logical_minimum>0</logical_minimum>
-      <logical_maximum>255</logical_maximum>
-      <physical_minimum>0</physical_minimum>
-      <physical_maximum>255</physical_maximum>
       <usage>desktop_rz<!-- Rz (35h, dynamic value) --></usage>
       <input>
         <variable/>
       </input>
-      <usage_page>FF00<!-- FF00h, vendor-defined --></usage_page>
-      <report_count>1</report_count>
-      <report_size>8</report_size>
-      <usage>0</usage>
       <input>
-        <variable/>
+        <constant/>
       </input>
     </COLLECTION>
     <COLLECTION type="logical">
-      <usage>02</usage>
+      <usage>desktop_mouse<!-- Mouse (02h, application collection) --></usage>
       <report_count>7</report_count>
       <output>
         <variable/>
