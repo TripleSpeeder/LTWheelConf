@@ -198,7 +198,7 @@ int main (int argc, char **argv)
             libusb_set_debug(0, 3);
         
         int wait_for_udev = 0;
-        int wheelIndex = -1;
+        wheelstruct* wheel = 0;
         
         if (do_help) {
             help();
@@ -212,53 +212,53 @@ int main (int argc, char **argv)
                 for (i=0; i < numWheels; i++) {
                     if (strncmp(wheels[i].shortname, shortname, 255) == 0) {
                         // found matching wheel
-                        wheelIndex = i;
+                        wheel = &(wheels[i]);
                         break;
                     }
                 }
-                if (wheelIndex == -1) {
+                if (!wheel) {
                     printf("Wheel \"%s\" not supported. Did you spell the shortname correctly?\n", shortname);
                 }
             }
 
             if (do_reset) {
-                if (wheelIndex == -1) {
+                if (!wheel) {
                     printf("Please provide --wheel parameter!\n");
                 } else {
-                    reset_wheel(wheelIndex);
+                    reset_wheel(wheel);
                     wait_for_udev = 1;
                 }
             }
             
             if (do_native) {
-                if (wheelIndex == -1) {
+                if (!wheel) {
                     printf("Please provide --wheel parameter!\n");
                 } else {
-                    set_native_mode(wheelIndex);
+                    set_native_mode(wheel);
                     wait_for_udev = 1;
                 }
             }
             
             if (do_range) {
-                if (wheelIndex == -1) {
+                if (!wheel) {
                     printf("Please provide --wheel parameter!\n");
                 } else {
-                    set_range(wheelIndex, range);
+                    set_range(wheel, clamprange(wheel, range));
                     wait_for_udev = 1;
                 }
             }
             
             if (do_autocenter) {
-                if (wheelIndex == -1) {
+                if (!wheel) {
                     printf("Please provide --wheel parameter!\n");
                 } else {
                     if (centerforce == 0) {
-                        set_autocenter(wheelIndex, centerforce, 0);
+                        set_autocenter(wheel, centerforce, 0);
                         wait_for_udev = 1;
                     } else if (rampspeed == -1) {
                         printf("Please provide '--rampspeed' parameter\n");
                     } else {
-                        set_autocenter(wheelIndex, centerforce, rampspeed);
+                        set_autocenter(wheel, centerforce, rampspeed);
                         wait_for_udev = 1;
                     }
                 }

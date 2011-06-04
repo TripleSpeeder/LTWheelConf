@@ -130,51 +130,49 @@ int send_command(libusb_device_handle *handle, cmdstruct command ) {
     return 0;
 }
 
-int set_native_mode(int wheelIndex)
+int set_native_mode(wheelstruct* w)
 {
-    wheelstruct w = wheels[wheelIndex];
-
-    // first check if wheel has native mode at all
-    if (w.native_pid == w.restricted_pid) {
-        printf( "%s is always in native mode.\n", w.name);
+    // first check if wheel has restriced/native mode at all
+    if (w->native_pid == w->restricted_pid) {
+        printf( "%s is always in native mode.\n", w->name);
         return 0;
     }
 
     // check if wheel is already in native mode
-    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.native_pid);
+    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w->native_pid);
     if ( handle != NULL ) {
-        printf( "Found a %s already in native mode.\n", w.name);
+        printf( "Found a %s already in native mode.\n", w->name);
         return 0;
     }
 
     // try to get handle to device in restricted mode
-    handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.restricted_pid );
+    handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w->restricted_pid );
     if ( handle == NULL ) {
-        printf( "Can not find %s in restricted mode (PID %x). This should not happen :-(\n", w.name, w.restricted_pid);
+        printf( "Can not find %s in restricted mode (PID %x). This should not happen :-(\n", w->name, w->restricted_pid);
         return -1;
     }
 
     // check if we know how to set native mode
-    if (!w.get_nativemode_cmd) {
-        printf( "Sorry, do not know how to set %s into native mode.\n", w.name);
+    if (!w->get_nativemode_cmd) {
+        printf( "Sorry, do not know how to set %s into native mode.\n", w->name);
         return -1;
     }
 
     cmdstruct c;
     memset(&c, 0, sizeof(c));
-    w.get_nativemode_cmd(&c);
+    w->get_nativemode_cmd(&c);
     send_command(handle, c);
 
     // wait until wheel reconfigures to new PID...
     sleep(CONFIGURE_WAIT_SEC);
 
     // If above command was successfully we should now find the wheel in extended mode
-    handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.native_pid);
+    handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w->native_pid);
     if ( handle != NULL ) {
-        printf ( "%s is now set to native mode.\n", w.name);
+        printf ( "%s is now set to native mode.\n", w->name);
     } else {
         // this should not happen, just in case
-        printf ( "Unable to set %s to native mode.\n", w.name );
+        printf ( "Unable to set %s to native mode.\n", w->name );
         return -1;
     }
 
@@ -182,53 +180,63 @@ int set_native_mode(int wheelIndex)
 }
 
 
-int set_range(int wheelIndex, unsigned short int range)
+short unsigned int clamprange(wheelstruct* w, short unsigned int range)
 {
-    wheelstruct w = wheels[wheelIndex];
+    if (range < w->min_rotation) {
+        printf("Minimum range for %s is %d degrees.\n", w->name, w->min_rotation);
+        range = w->min_rotation;
+    }
+    if (range > w->max_rotation) {
+        range = w->max_rotation;
+        printf("Maximum range for %s is %d degrees.\n", w->name, w->max_rotation);
+    }
+    return range;
+}
 
-    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.native_pid );
+
+int set_range(wheelstruct* w, short unsigned int range)
+{
+    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w->native_pid );
     if ( handle == NULL ) {
-        printf ( "%s not found. Make sure it is set to native mode (use --native).\n", w.name);
+        printf ( "%s not found. Make sure it is set to native mode (use --native).\n", w->name);
         return -1;
     }
 
-    if (!w.get_range_cmd) {
-        printf( "Sorry, do not know how to set rotation range for %s.\n", w.name);
+    if (!w->get_range_cmd) {
+        printf( "Sorry, do not know how to set rotation range for %s.\n", w->name);
         return -1;
     }
 
     cmdstruct c;
     memset(&c, 0, sizeof(c));
-    w.get_range_cmd(&c, range);
+    w->get_range_cmd(&c, range);
     send_command(handle, c);
 
-    printf ("Wheel rotation range of %s is now set to %d degrees.\n", w.name, range);
+    printf ("Wheel rotation range of %s is now set to %d degrees.\n", w->name, range);
     return 0;
 
 }
 
 
-int set_autocenter(int wheelIndex, int centerforce, int rampspeed)
+int set_autocenter(wheelstruct* w, int centerforce, int rampspeed)
 {
-    wheelstruct w = wheels[wheelIndex];
-
-    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.native_pid );
+    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w->native_pid );
     if ( handle == NULL ) {
-        printf ( "%s not found. Make sure it is set to native mode (use --native).\n", w.name);
+        printf ( "%s not found. Make sure it is set to native mode (use --native).\n", w->name);
         return -1;
     }
 
-    if (!w.get_autocenter_cmd) {
-        printf( "Sorry, do not know how to set autocenter force for %s. Please try generic implementation using --alt_autocenter.\n", w.name);
+    if (!w->get_autocenter_cmd) {
+        printf( "Sorry, do not know how to set autocenter force for %s. Please try generic implementation using --alt_autocenter.\n", w->name);
         return -1;
     }
 
     cmdstruct c;
     memset(&c, 0, sizeof(c));
-    w.get_autocenter_cmd(&c, centerforce, rampspeed);
+    w->get_autocenter_cmd(&c, centerforce, rampspeed);
     send_command(handle, c);
 
-    printf ("Autocenter for %s is now set to %d with rampspeed %d.\n", w.name, centerforce, rampspeed);
+    printf ("Autocenter for %s is now set to %d with rampspeed %d.\n", w->name, centerforce, rampspeed);
     return 0;
 }
 
@@ -291,12 +299,11 @@ int set_gain(int gain, char *device_file_name, int wait_for_udev) {
     return 0;
 }
 
-int reset_wheel(int wheelIndex)
+int reset_wheel(wheelstruct* w)
 {
-    wheelstruct w = wheels[wheelIndex];
-    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w.native_pid );
+    libusb_device_handle *handle = libusb_open_device_with_vid_pid(NULL, VID_LOGITECH, w->native_pid );
     if ( handle == NULL ) {
-        printf ( "%s not found. Make sure it is set to native mode (use --native).\n", w.name);
+        printf ( "%s not found. Make sure it is set to native mode (use --native).\n", w->name);
         return -1;
     }
     return libusb_reset_device(handle);

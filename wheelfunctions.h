@@ -37,13 +37,18 @@
  *
  * Rampspeed seems to be limited to 0-7 only.
  */
-int set_autocenter(int wheelIndex, int centerforce, int rampspeed);
+int set_autocenter(wheelstruct* w, int centerforce, int rampspeed);
 
 /*
  * Set maximum rotation range of wheel in degrees
  * G25/G27/DFP support up to 900 degrees.
  */
-int set_range(int wheelIndex, unsigned short int range);
+int set_range(wheelstruct* w, unsigned short int range);
+
+/*
+ * Clamp range value to be in allowed range for specified wheel
+ */
+unsigned short int clamprange(wheelstruct* w, unsigned short int range);
 
 /*
  * Search and list all known/supported wheels
@@ -69,7 +74,7 @@ int send_command(libusb_device_handle *handle, cmdstruct command );
  * This function takes care to switch the wheel to "native" mode with no restrictions.
  *
  */
-int set_native_mode(int wheelIndex);
+int set_native_mode(wheelstruct* w);
 
 /*
  * Generic method to set autocenter force of any wheel device recognized by kernel
@@ -88,6 +93,6 @@ int set_gain(int gain, char *device_file_name, int wait_for_udev);
 /*
  * Reset the wheel, similar like unplug-replug cycle
  */
-int reset_wheel(int wheelindex);
+int reset_wheel(wheelstruct* w);
 
 #endif

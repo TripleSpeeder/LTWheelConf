@@ -36,6 +36,8 @@ typedef struct {
     char name[255];
     unsigned int restricted_pid;
     unsigned int native_pid;
+    unsigned int min_rotation;
+    unsigned int max_rotation;
     int (*get_nativemode_cmd)(cmdstruct *c);
     int (*get_range_cmd)(cmdstruct *c, int range);
     int (*get_autocenter_cmd)(cmdstruct *c, int centerforce, int rampspeed);
@@ -56,6 +58,8 @@ static const wheelstruct wheels[] = {
         "Driving Force", 
         0xc294,
         0xc294,
+        40,
+        240,
         0,
         0,
         0
@@ -65,6 +69,8 @@ static const wheelstruct wheels[] = {
         "Momo Force", 
         0xc294,
         0xc295,
+        40,
+        240,
         0,
         0,
         0
@@ -74,6 +80,8 @@ static const wheelstruct wheels[] = {
         "Driving Force Pro",
         0xc294,
         0xc298,
+        200,
+        900,
         &get_nativemode_cmd_DFP,
         &get_range_cmd2,
         &get_autocenter_cmd
@@ -83,6 +91,8 @@ static const wheelstruct wheels[] = {
         "G25", 
         0xc294,
         0xc299,
+        40,
+        900,
         &get_nativemode_cmd_G25,
         &get_range_cmd,
         &get_autocenter_cmd
@@ -92,6 +102,8 @@ static const wheelstruct wheels[] = {
         "Driving Force GT", 
         0xc294,
         0xc29A,
+        40,
+        900,
         0,
         0,
         0
@@ -101,6 +113,8 @@ static const wheelstruct wheels[] = {
         "G27", 
         0xc294,
         0xc29B,
+        40,
+        900,
         &get_nativemode_cmd_G27,
         &get_range_cmd,
         &get_autocenter_cmd
