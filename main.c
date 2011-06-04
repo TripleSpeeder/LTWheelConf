@@ -19,7 +19,7 @@
  */
 
 
-#define VERSION "0.2.4"
+#define VERSION "0.2.5"
 
 #include <getopt.h>
 #include <stdio.h>
