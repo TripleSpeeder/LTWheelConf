@@ -210,7 +210,7 @@ int main (int argc, char **argv)
                 int numWheels = sizeof(wheels)/sizeof(wheelstruct);
                 int i = 0;
                 for (i=0; i < numWheels; i++) {
-                    if (strncmp(wheels[i].shortname, shortname, 255) == 0) {
+                    if (strncasecmp(wheels[i].shortname, shortname, 255) == 0) {
                         // found matching wheel
                         wheel = &(wheels[i]);
                         break;
