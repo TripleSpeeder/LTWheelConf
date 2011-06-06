@@ -19,7 +19,7 @@
  */
 
 
-#define VERSION "0.2.5"
+#define VERSION "0.2.6"
 
 #include <getopt.h>
 #include <stdio.h>
@@ -48,6 +48,7 @@ void help() {
     Wheel configuration: \n\
     -w, --wheel=shortname       Which wheel is connected. Supported values:\n\
         -> 'DF'   (Driving Force)\n\
+        -> 'MR'   (Momo Racing)\n\
         -> 'MF'   (Momo Force)\n\
         -> 'DFP'  (Driving Force Pro)\n\
         -> 'DFGT' (Driving Force GT)\n\

@@ -67,8 +67,20 @@ static const wheelstruct wheels[] = {
         0
     },
     { 
+        "MR",
+        "Momo Racing",
+        0xcA03,
+        0xcA03,
+        40,
+        240,
+        0x0019,
+        0,
+        0,
+        &get_autocenter_cmd
+    }, 
+    {
         "MF",
-        "Momo Force", 
+        "Momo Force",
         0xc294,
         0xc295,
         40,
@@ -77,7 +89,7 @@ static const wheelstruct wheels[] = {
         0,
         0,
         0
-    }, 
+    },
     { 
         "DFP",
         "Driving Force Pro",
