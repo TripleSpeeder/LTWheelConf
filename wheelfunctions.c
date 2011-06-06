@@ -63,9 +63,9 @@ void list_devices() {
                 if (ret == 0) {
                     numFound++;
                     libusb_get_string_descriptor_ascii(handle, desc.iProduct, descString, 255);
-                    printf("\t\tFound \"%s\", %04x:%04x (bus %d, device %d)", descString, desc.idVendor, desc.idProduct,
-                           libusb_get_bus_number(dev), libusb_get_device_address(dev));
-
+                    printf("\t\tFound \"%s\", release number %x, %04x:%04x (bus %d, device %d, address %d)",
+                           descString, desc.bcdDevice, desc.idVendor, desc.idProduct,
+                           libusb_get_bus_number(dev), libusb_get_device_address(dev), libusb_get_device_address(dev));
                 } else {
                     perror("Get device descriptor");
                 }
@@ -78,7 +78,6 @@ void list_devices() {
     }
     printf("Found %d devices.\n", numFound);
 }
-
 
 int send_command(libusb_device_handle *handle, cmdstruct command ) {
     if (command.numCmds == 0) {

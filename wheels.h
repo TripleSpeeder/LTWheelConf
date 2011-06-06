@@ -38,6 +38,7 @@ typedef struct {
     unsigned int native_pid;
     unsigned int min_rotation;
     unsigned int max_rotation;
+    unsigned int revision;               /* aka bcdDevice - Device Release Number according to HID specs */
     int (*get_nativemode_cmd)(cmdstruct *c);
     int (*get_range_cmd)(cmdstruct *c, int range);
     int (*get_autocenter_cmd)(cmdstruct *c, int centerforce, int rampspeed);
@@ -62,6 +63,7 @@ static const wheelstruct wheels[] = {
         240,
         0,
         0,
+        0,
         0
     },
     { 
@@ -73,6 +75,7 @@ static const wheelstruct wheels[] = {
         240,
         0,
         0,
+        0,
         0
     }, 
     { 
@@ -82,6 +85,7 @@ static const wheelstruct wheels[] = {
         0xc298,
         200,
         900,
+        0x1106,
         &get_nativemode_cmd_DFP,
         &get_range_cmd2,
         &get_autocenter_cmd
@@ -93,6 +97,7 @@ static const wheelstruct wheels[] = {
         0xc299,
         40,
         900,
+        0x1222,
         &get_nativemode_cmd_G25,
         &get_range_cmd,
         &get_autocenter_cmd
@@ -106,6 +111,7 @@ static const wheelstruct wheels[] = {
         900,
         0,
         0,
+        0,
         0
     },
     { 
@@ -115,6 +121,7 @@ static const wheelstruct wheels[] = {
         0xc29B,
         40,
         900,
+        0,
         &get_nativemode_cmd_G27,
         &get_range_cmd,
         &get_autocenter_cmd
