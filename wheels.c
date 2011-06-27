@@ -15,6 +15,30 @@ int get_nativemode_cmd_DFP(cmdstruct *c)
     return 0;
 }
 
+int get_nativemode_cmd_DFGT(cmdstruct *c)
+{
+    c->cmds[0][0] = 0xf8;
+    c->cmds[0][1] = 0x0a;
+    c->cmds[0][2] = 0x00;
+    c->cmds[0][3] = 0x00;
+    c->cmds[0][4] = 0x00;
+    c->cmds[0][5] = 0x00;
+    c->cmds[0][6] = 0x00;
+    c->cmds[0][7] = 0x00;
+
+    c->cmds[1][0] = 0xf8;
+    c->cmds[1][1] = 0x09;
+    c->cmds[1][2] = 0x03;
+    c->cmds[1][3] = 0x01;
+    c->cmds[1][4] = 0x00;
+    c->cmds[1][5] = 0x00;
+    c->cmds[1][6] = 0x00;
+    c->cmds[1][7] = 0x00;
+
+    c->numCmds = 2;
+    return 0;
+}
+
 int get_nativemode_cmd_G25(cmdstruct *c)
 {
     c->cmds[0][0] = 0xf8;
@@ -53,7 +77,7 @@ int get_nativemode_cmd_G27(cmdstruct *c)
     return 0;
 }
 
-/* used by G25 and G27 */
+/* used by DFGT, G25, G27 */
 int get_range_cmd(cmdstruct *c, int range)
 {
     c->cmds[0][0] = 0xf8;

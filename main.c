@@ -19,7 +19,7 @@
  */
 
 
-#define VERSION "0.2.6"
+#define VERSION "0.2.7"
 
 #include <getopt.h>
 #include <stdio.h>
@@ -117,7 +117,7 @@ int main (int argc, char **argv)
     char shortname[255];
     memset(device_file_name, 0, sizeof(device_file_name));
     verbose_flag = 0;
-    
+
     static struct option long_options[] =
     {
         {"verbose",         no_argument,       0,               'v'},
@@ -134,15 +134,15 @@ int main (int argc, char **argv)
         {"reset",           no_argument,       0,               'x'},
         {0,                 0,                 0,               0  }
     };
-    
+
     while (optind < argc) {
         int index = -1;
         int result = getopt_long (argc, argv, "vhlw:nr:a:g:d:s:b:x",
                                   long_options, &index);
-        
+
         if (result == -1)
             break; /* end of list */
-            
+
             switch (result) {
                 case 'v':
                     verbose_flag++;
@@ -189,18 +189,18 @@ int main (int argc, char **argv)
                     do_help = 1;
                     break;
             }
-            
+
     }
-    
+
     if (argc > 1)
     {
         libusb_init(NULL);
         if (verbose_flag > 1)
             libusb_set_debug(0, 3);
-        
+
         int wait_for_udev = 0;
         wheelstruct* wheel = 0;
-        
+
         if (do_help) {
             help();
         } else if (do_list) {
@@ -230,7 +230,7 @@ int main (int argc, char **argv)
                     wait_for_udev = 1;
                 }
             }
-            
+
             if (do_native) {
                 if (!wheel) {
                     printf("Please provide --wheel parameter!\n");
@@ -239,7 +239,7 @@ int main (int argc, char **argv)
                     wait_for_udev = 1;
                 }
             }
-            
+
             if (do_range) {
                 if (!wheel) {
                     printf("Please provide --wheel parameter!\n");
@@ -248,7 +248,7 @@ int main (int argc, char **argv)
                     wait_for_udev = 1;
                 }
             }
-            
+
             if (do_autocenter) {
                 if (!wheel) {
                     printf("Please provide --wheel parameter!\n");
@@ -264,7 +264,7 @@ int main (int argc, char **argv)
                     }
                 }
             }
-            
+
             if (do_alt_autocenter) {
                 if (strlen(device_file_name)) {
                     alt_set_autocenter(centerforce, device_file_name, wait_for_udev);
@@ -273,7 +273,7 @@ int main (int argc, char **argv)
                     printf("Please provide the according event interface for your wheel using '--device' parameter (E.g. '--device /dev/input/event0')\n");
                 }
             }
-            
+
             if (do_gain) {
                 if (strlen(device_file_name)) {
                     set_gain(gain, device_file_name, wait_for_udev);

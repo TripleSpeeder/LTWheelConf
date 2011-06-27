@@ -46,6 +46,7 @@ typedef struct {
 
 
 int get_nativemode_cmd_DFP(cmdstruct *c);
+int get_nativemode_cmd_DFGT(cmdstruct *c);
 int get_nativemode_cmd_G25(cmdstruct *c);
 int get_nativemode_cmd_G27(cmdstruct *c);
 int get_range_cmd(cmdstruct *c, int range);
@@ -122,9 +123,9 @@ static const wheelstruct wheels[] = {
         40,
         900,
         0,
-        0,
-        0,
-        0
+        &get_nativemode_cmd_DFGT,
+        &get_range_cmd,
+        &get_autocenter_cmd
     },
     {
         "G27",
