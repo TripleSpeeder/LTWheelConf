@@ -54,9 +54,9 @@ int get_autocenter_cmd(cmdstruct *c, int centerforce, int rampspeed);
 
 
 static const wheelstruct wheels[] = {
-    { 
+    {
         "DF",
-        "Driving Force", 
+        "Driving Force",
         0xc294,
         0xc294,
         40,
@@ -66,7 +66,7 @@ static const wheelstruct wheels[] = {
         0,
         0
     },
-    { 
+    {
         "MR",
         "Momo Racing",
         0xcA03,
@@ -77,7 +77,7 @@ static const wheelstruct wheels[] = {
         0,
         0,
         &get_autocenter_cmd
-    }, 
+    },
     {
         "MF",
         "Momo Force",
@@ -90,21 +90,21 @@ static const wheelstruct wheels[] = {
         0,
         0
     },
-    { 
+    {
         "DFP",
         "Driving Force Pro",
         0xc294,
         0xc298,
-        200,
+        0,
         900,
         0x1106,
         &get_nativemode_cmd_DFP,
         &get_range_cmd2,
         &get_autocenter_cmd
     },
-    { 
+    {
         "G25",
-        "G25", 
+        "G25",
         0xc294,
         0xc299,
         40,
@@ -113,10 +113,10 @@ static const wheelstruct wheels[] = {
         &get_nativemode_cmd_G25,
         &get_range_cmd,
         &get_autocenter_cmd
-    }, 
-    { 
+    },
+    {
         "DFGT",
-        "Driving Force GT", 
+        "Driving Force GT",
         0xc294,
         0xc29A,
         40,
@@ -126,9 +126,9 @@ static const wheelstruct wheels[] = {
         0,
         0
     },
-    { 
-        "G27", 
-        "G27", 
+    {
+        "G27",
+        "G27",
         0xc294,
         0xc29B,
         40,
