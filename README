@@ -1,3 +1,14 @@
+
+===================================================================================
+
+This project is not maintained anymore. We managed to get most / all wheels supported directly by
+the kernel, so there is no need for this separate tool anymore.
+
+Thank you to all involved hackers :-)
+
+===================================================================================
+
+
 This tool allows you to change various settings of the Logitech racing wheels
 -> Driving Force
 -> Momo Racing
